@@ -41,64 +41,71 @@ void put_char(volatile unsigned char *port, unsigned char pin, char txchar) {
    //
    // start bit
    //
- clear(*port,pin);
- bit_delay();
+   clear(*port,pin);
+   bit_delay();
    //
    // unrolled loop to write data bits
    //
- if bit_test(txchar,0)
-  set(*port,pin);
-else
-  clear(*port,pin);
-bit_delay();
-if bit_test(txchar,1)
-  set(*port,pin);
-else
-  clear(*port,pin);
-bit_delay();
-if bit_test(txchar,2)
-  set(*port,pin);
-else
-  clear(*port,pin);
-bit_delay();
-if bit_test(txchar,3)
-  set(*port,pin);
-else
-  clear(*port,pin);
-bit_delay();
-if bit_test(txchar,4)
-  set(*port,pin);
-else
-  clear(*port,pin);
-bit_delay();
-if bit_test(txchar,5)
-  set(*port,pin);
-else
-  clear(*port,pin);
-bit_delay();
-if bit_test(txchar,6)
-  set(*port,pin);
-else
-  clear(*port,pin);
-bit_delay();
-if bit_test(txchar,7)
-  set(*port,pin);
-else
-  clear(*port,pin);
-bit_delay();
+   if bit_test(txchar,0)
+   set(*port,pin);
+   else
+   clear(*port,pin);
+   bit_delay();
+   if bit_test(txchar,1)
+   set(*port,pin);
+   else
+   clear(*port,pin);
+   bit_delay();
+   if bit_test(txchar,2)
+   set(*port,pin);
+   else
+   clear(*port,pin);
+   bit_delay();
+   if bit_test(txchar,3)
+   set(*port,pin);
+   else
+   clear(*port,pin);
+   bit_delay();
+   if bit_test(txchar,4)
+   set(*port,pin);
+   else
+   clear(*port,pin);
+   bit_delay();
+   if bit_test(txchar,5)
+   set(*port,pin);
+   else
+   clear(*port,pin);
+   bit_delay();
+   if bit_test(txchar,6)
+   set(*port,pin);
+   else
+   clear(*port,pin);
+   bit_delay();
+   if bit_test(txchar,7)
+   set(*port,pin);
+   else
+   clear(*port,pin);
+   bit_delay();
    //
    // stop bit
    //
-set(*port,pin);
-bit_delay();
+   set(*port,pin);
+   bit_delay();
    //
    // char delay
    //
-bit_delay();
+   bit_delay();
 }
+
+
 
 #define SIT_THRESHOLD_ONE 30
 #define SIT_THRESHOLD_TWO 300
+
+static volatile uint16_t val1A = 0;
+static volatile uint16_t val1B = 0;
+static volatile uint16_t val2A = 0;
+static volatile uint16_t val2B = 0;
 
 int main(void) {
     //
@@ -133,14 +140,56 @@ int main(void) {
 
     // Main loop
 
-    uint16_t val1A = 0;
-    uint16_t val1B = 0;
-    uint16_t val2A = 0;
-    uint16_t val2B = 0;
-
     while (1) {
+        
+        readSensors();
 
-        // Read each sensor
+        uint16_t avg1 = (val1A + val1B) / 2;
+        uint16_t avg2 = (val2A + val2B) / 2;
+
+        if (avg1 > SIT_THRESHOLD_ONE && avg2 > SIT_THRESHOLD_TWO) {
+            set(PORTB, sensor_out);
+        }
+        else {
+            clear(PORTB, sensor_out);
+        }
+
+
+
+        //
+        // send framing
+        //
+        // put_char(&serial_port, serial_pin_out, 1);
+        // char_delay();
+        // put_char(&serial_port, serial_pin_out, 2);
+        // char_delay();
+        // put_char(&serial_port, serial_pin_out, 3);
+        // char_delay();
+        // put_char(&serial_port, serial_pin_out, 4);
+
+        //
+        // send result
+        //
+        // put_char(&serial_port, serial_pin_out, (val1A & 0xFF));
+        // char_delay();
+        // put_char(&serial_port, serial_pin_out, ((val1A >> 8) & 0xFF));
+        // char_delay();
+        // put_char(&serial_port, serial_pin_out, (val1B & 0xFF));
+        // char_delay();
+        // put_char(&serial_port, serial_pin_out, ((val1B >> 8) & 0xFF));
+        // char_delay();
+        // put_char(&serial_port, serial_pin_out, (val2A & 0xFF));
+        // char_delay();
+        // put_char(&serial_port, serial_pin_out, ((val2A >> 8) & 0xFF));
+        // char_delay();
+        // put_char(&serial_port, serial_pin_out, (val2B & 0xFF));
+        // char_delay();
+        // put_char(&serial_port, serial_pin_out, ((val2B >> 8) & 0xFF));
+        // char_delay();
+    }
+}
+
+inline void readSensors() {
 
         // PA0 - PA1 difference (20x gain)
         ADMUX = (1 << REFS1) | (0 << REFS0) | (0 << MUX5) | (0 << MUX4) | (1 << MUX3) | (0 << MUX2) | (0 << MUX1) | (1 << MUX0);
@@ -176,50 +225,4 @@ int main(void) {
             ;
         }
         val2B = ADC;
-
-        uint16_t avg1 = (val1A + val1B) / 2;
-        uint16_t avg2 = (val2A + val2B) / 2;
-
-        if (avg1 > SIT_THRESHOLD_ONE && avg2 > SIT_THRESHOLD_TWO) {
-            set(PORTB, sensor_out);
-        }
-        else {
-            clear(PORTB, sensor_out);
-        }
-
-        // Simplest debounce possible
-        _delay_ms(5);
-
-
-        //
-        // send framing
-        //
-        // put_char(&serial_port, serial_pin_out, 1);
-        // char_delay();
-        // put_char(&serial_port, serial_pin_out, 2);
-        // char_delay();
-        // put_char(&serial_port, serial_pin_out, 3);
-        // char_delay();
-        // put_char(&serial_port, serial_pin_out, 4);
-
-        //
-        // send result
-        //
-        // put_char(&serial_port, serial_pin_out, (val1A & 0xFF));
-        // char_delay();
-        // put_char(&serial_port, serial_pin_out, ((val1A >> 8) & 0xFF));
-        // char_delay();
-        // put_char(&serial_port, serial_pin_out, (val1B & 0xFF));
-        // char_delay();
-        // put_char(&serial_port, serial_pin_out, ((val1B >> 8) & 0xFF));
-        // char_delay();
-        // put_char(&serial_port, serial_pin_out, (val2A & 0xFF));
-        // char_delay();
-        // put_char(&serial_port, serial_pin_out, ((val2A >> 8) & 0xFF));
-        // char_delay();
-        // put_char(&serial_port, serial_pin_out, (val2B & 0xFF));
-        // char_delay();
-        // put_char(&serial_port, serial_pin_out, ((val2B >> 8) & 0xFF));
-        // char_delay();
     }
-}
