@@ -32,3 +32,6 @@ program-ice: $(PROJECT).hex
 
 program-jtag2pdi: $(PROJECT).hex
 	avrdude -v -p x16e5 -c jtag2pdi -U flash:w:$(PROJECT).c.hex
+
+assemble:
+	avr-gcc -S -fverbose-asm $(CFLAGS) -I./ $(SOURCES)
