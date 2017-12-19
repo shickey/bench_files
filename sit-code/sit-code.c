@@ -23,7 +23,7 @@
 #define clear(port,pin) (port &= (~pin)) // clear port pin
 #define pin_test(pins,pin) (pins & pin) // test for port pin
 #define bit_test(byte,bit) (byte & (1 << bit)) // test for bit set
-#define bit_delay_time 10002 // bit delay for 9600 with overhead
+#define bit_delay_time 102 // bit delay for 9600 with overhead
 #define bit_delay() _delay_us(bit_delay_time) // RS232 bit delay
 #define half_bit_delay() _delay_us(bit_delay_time/2) // RS232 half bit delay
 #define settle_delay() _delay_us(100) // settle delay
@@ -33,6 +33,12 @@
 #define serial_direction DDRB
 #define serial_pin_out (1 << PB0)
 #define sensor_out (1 << PB1)
+
+// Calibration Values
+#define ONE_A_OFFSET 0
+#define ONE_B_OFFSET -20
+#define TWO_A_OFFSET 0
+#define TWO_B_OFFSET 0
 
 void put_char(volatile unsigned char *port, unsigned char pin, char txchar) {
    //
@@ -99,8 +105,8 @@ void put_char(volatile unsigned char *port, unsigned char pin, char txchar) {
 
 
 
-#define SIT_THRESHOLD_ONE 30
-#define SIT_THRESHOLD_TWO 300
+#define SIT_THRESHOLD_ONE 25
+#define SIT_THRESHOLD_TWO 25
 
 static volatile uint16_t val1A = 0;
 static volatile uint16_t val1B = 0;
@@ -133,7 +139,7 @@ int main(void) {
       // | (0 << ADLAR) // right adjust
       // | (0 << MUX5) | (0 << MUX4) | (1 << MUX3) | (0 << MUX2) | (0 << MUX1) | (1 << MUX0); // PA0 - PA1 difference (20x gain)
    ADCSRA = (1 << ADEN) // enable
-      | (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0); // prescaler /2
+      | (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0); // prescaler /128
 
 
 
@@ -147,7 +153,7 @@ int main(void) {
         uint16_t avg1 = (val1A + val1B) / 2;
         uint16_t avg2 = (val2A + val2B) / 2;
 
-        if (avg1 > SIT_THRESHOLD_ONE && avg2 > SIT_THRESHOLD_TWO) {
+        if ((avg1 > SIT_THRESHOLD_ONE) && (avg2 > SIT_THRESHOLD_TWO)) {
             set(PORTB, sensor_out);
         }
         else {
@@ -159,33 +165,33 @@ int main(void) {
         //
         // send framing
         //
-        // put_char(&serial_port, serial_pin_out, 1);
-        // char_delay();
-        // put_char(&serial_port, serial_pin_out, 2);
-        // char_delay();
-        // put_char(&serial_port, serial_pin_out, 3);
-        // char_delay();
-        // put_char(&serial_port, serial_pin_out, 4);
+        put_char(&serial_port, serial_pin_out, 1);
+        char_delay();
+        put_char(&serial_port, serial_pin_out, 2);
+        char_delay();
+        put_char(&serial_port, serial_pin_out, 3);
+        char_delay();
+        put_char(&serial_port, serial_pin_out, 4);
 
         //
         // send result
         //
-        // put_char(&serial_port, serial_pin_out, (val1A & 0xFF));
-        // char_delay();
-        // put_char(&serial_port, serial_pin_out, ((val1A >> 8) & 0xFF));
-        // char_delay();
-        // put_char(&serial_port, serial_pin_out, (val1B & 0xFF));
-        // char_delay();
-        // put_char(&serial_port, serial_pin_out, ((val1B >> 8) & 0xFF));
-        // char_delay();
-        // put_char(&serial_port, serial_pin_out, (val2A & 0xFF));
-        // char_delay();
-        // put_char(&serial_port, serial_pin_out, ((val2A >> 8) & 0xFF));
-        // char_delay();
-        // put_char(&serial_port, serial_pin_out, (val2B & 0xFF));
-        // char_delay();
-        // put_char(&serial_port, serial_pin_out, ((val2B >> 8) & 0xFF));
-        // char_delay();
+        put_char(&serial_port, serial_pin_out, (val1A & 0xFF));
+        char_delay();
+        put_char(&serial_port, serial_pin_out, ((val1A >> 8) & 0xFF));
+        char_delay();
+        put_char(&serial_port, serial_pin_out, (val1B & 0xFF));
+        char_delay();
+        put_char(&serial_port, serial_pin_out, ((val1B >> 8) & 0xFF));
+        char_delay();
+        put_char(&serial_port, serial_pin_out, (val2A & 0xFF));
+        char_delay();
+        put_char(&serial_port, serial_pin_out, ((val2A >> 8) & 0xFF));
+        char_delay();
+        put_char(&serial_port, serial_pin_out, (val2B & 0xFF));
+        char_delay();
+        put_char(&serial_port, serial_pin_out, ((val2B >> 8) & 0xFF));
+        char_delay();
     }
 }
 
@@ -200,7 +206,10 @@ inline void readSensors() {
             ;
         }
         // Store the value
-        val1A = ADC;
+        val1A = ADC + ONE_A_OFFSET;
+        if (val1A > 32767) { // Prevent negative rollover
+          val1A = 0;
+        }
 
         // PA2 - PA3 difference (20x gain)
         ADMUX = (1 << REFS1) | (0 << REFS0) | (0 << MUX5) | (1 << MUX4) | (0 << MUX3) | (0 << MUX2) | (0 << MUX1) | (1 << MUX0);
@@ -208,7 +217,10 @@ inline void readSensors() {
         while (ADCSRA & (1 << ADSC)) {
             ;
         }
-        val1B = ADC;
+        val1B = ADC + ONE_B_OFFSET;
+        if (val1B > 32767) {
+          val1B = 0;
+        }
 
         // PA4 - PA5 difference (20x gain)
         ADMUX = (1 << REFS1) | (0 << REFS0) | (0 << MUX5) | (1 << MUX4) | (1 << MUX3) | (0 << MUX2) | (1 << MUX1) | (1 << MUX0);
@@ -216,7 +228,10 @@ inline void readSensors() {
         while (ADCSRA & (1 << ADSC)) {
             ;
         }
-        val2A = ADC;
+        val2A = ADC + TWO_A_OFFSET;
+        if (val2A > 32767) {
+          val2A = 0;
+        }
 
         // PA6 - PA7 difference (20x gain)
         ADMUX = (1 << REFS1) | (0 << REFS0) | (0 << MUX5) | (1 << MUX4) | (1 << MUX3) | (1 << MUX2) | (1 << MUX1) | (1 << MUX0);
@@ -224,5 +239,8 @@ inline void readSensors() {
         while (ADCSRA & (1 << ADSC)) {
             ;
         }
-        val2B = ADC;
+        val2B = ADC + TWO_B_OFFSET;
+        if (val2B > 32767) {
+          val2B = 0;
+        }
     }

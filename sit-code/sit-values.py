@@ -17,6 +17,7 @@ ser.setDTR()
 
 
 while 1:
+   byte1 = 0
    byte2 = 0
    byte3 = 0
    byte4 = 0
@@ -38,18 +39,21 @@ while 1:
    #
    val_1Alow = ord(ser.read())
    val_1Ahigh = ord(ser.read())
-   val_1A = (256 * val1A_low) + val1A_high
+   val_1A = (256 * val_1Ahigh) + val_1Alow
 
    val_1Blow = ord(ser.read())
    val_1Bhigh = ord(ser.read())
-   val_1B = (256 * val1B_low) + val1B_high
+   val_1B = (256 * val_1Bhigh) + val_1Blow
 
    val_2Alow = ord(ser.read())
    val_2Ahigh = ord(ser.read())
-   val_2A = (256 * val2A_low) + val2A_high
+   val_2A = (256 * val_2Ahigh) + val_2Alow
 
    val_2Blow = ord(ser.read())
    val_2Bhigh = ord(ser.read())
-   val_2B = (256 * val2B_low) + val2B_high
+   val_2B = (256 * val_2Bhigh) + val_2Blow
 
-   print("Values 1A: " + str(val1A) + "   1B: " + str(val1B) + "   2A: " + str(val2A) + "   2B: " + str(val2B))
+   avg1 = (val_1A + val_1B) / 2
+   avg2 = (val_2A + val_2B) / 2
+   # print("Values 1A: " + str(val_1A) + "   1B: " + str(val_1B) + "   2A: " + str(val_2A) + "   2B: " + str(val_2B))
+   print("Avg 1: " + str(avg1) + " Avg 2: " + str(avg2))
